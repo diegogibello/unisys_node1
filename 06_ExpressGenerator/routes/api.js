@@ -1,35 +1,68 @@
-var express = require('express');
-var router = express.Router();
+const express = require('express');
+const router = express.Router();
+const createError = require('http-errors');
+const {readData, writeData} = require('../api/api.js')
 
-/* GET users listing. */
+function newID (users) {
+    let ides = users.map(item => item.id)
+    ides.sort( (a,b) => a-b )
+    return Number(ides[ides.length-1])+1
+}
 
-router.get('/', function(req, res, next) {
-  res.send(data)
+router.get('/', async function(req, res, next) {
+    try {
+        const users = await readData()
+        res.send(users);
+    } catch (err) {
+        console.log(err)
+    }
 });
 
-router.get('/:id', function(req, res, next) {
-    let id = req.params.id
-    let userNum = data.find( item => item.id == id)
-    res.send(data[userNum])
-  });
+router.get('/:id', async function(req, res, next) {
+    try {
+        const users = await readData()
+        const userNum = users.findIndex( item => item.id == req.params.id)
+        if(userNum < 0) { throw( 404 ) }
+        res.send(users[userNum]);
+    } catch (err) {
+        console.log('En el router se detecta un error ',err)
+        // next(createError(err))
+        res.send({Error: err})
+    }
+});
 
-router.post('/', function(req, res, next) {
-     const newUser = req.body
-     newUser.id = newID()
-     data.push(newUser)
-    res.send(data[data.length])
-  });
+router.post('/', async function(req, res, next) {
+    try {
+        const users = await readData()
+        const newUser = req.body
+        newUser.id = newID(users)
+        users.push(newUser)
+        await writeData(users)
+        res.send(users[users.length-1])
+    } catch (err) {
+    }
+});
 
-  router.put('/:id', function(req, res, next) {
-    let userNum = data.find( item => item.id == id)
-    data[user] = req.body
-    res.send(msg)
-  });
-  
-  router.delete('/:id', function(req, res, next) {
-    let userNum = data.find( item => item.id == id)
-    data.splice(userNum, 1)
-   res.send({})
- });
+router.put('/:id', async function(req, res, next) {
+    try {
+        const users = await readData()
+        const userNum = users.findIndex( item => item.id == req.params.id)
+        if(userNum < 0) { throw( 403 ) }
+        const id = users[userNum].id
+        users[userNum] = req.body
+        users[userNum].id = id
+        await writeData(users)
+        res.send(users[userNum]);
+    } catch (error) {
+    }
+});
+
+router.delete ('/:id', async function(req, res, next) {
+    const users = await readData()
+    let userNum = users.findIndex( item => item.id == req.params.id)
+    users.splice(userNum, 1)
+    await writeData(users)
+    res.send({});
+});
 
 module.exports = router;
